@@ -1,117 +1,189 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import toast, { Toaster } from 'react-hot-toast';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
+import {
+  MDBContainer,
+  MDBRow,
+  MDBCol,
+  MDBInput,
+  MDBBtn,
+  MDBCard,
+  MDBCardBody,
+  MDBCardTitle,
+  MDBCardText,
+  MDBIcon,
+} from "mdb-react-ui-kit";
 
 const App = () => {
-  const [datapost, Setdatapost] = useState({ Title: '', Description: '' });
-  // console.log(datapost);
+  const [datapost, setDatapost] = useState({ Title: "", Description: "" });
+  const [data, setData] = useState([]);
+  const [editId, setEditId] = useState(null);
 
   const postdata = async (e) => {
     e.preventDefault();
 
     try {
-      const response = await axios.post('http://localhost:3003/api/tudolist/addtudo', {
-        Title: datapost.Title,
-        Description: datapost.Description,
-      });
-      
+      const response = await axios.post(
+        "http://localhost:3003/api/tudolist/addtudo",
+        {
+          Title: datapost.Title,
+          Description: datapost.Description,
+        }
+      );
+
       toast.success(response.data.message);
+      const updatedList = await axios.get(
+        "http://localhost:3003/api/tudolist/showalldatas"
+      );
+      setData(updatedList.data);
+      setDatapost({ Title: "", Description: "" });
     } catch (error) {
-      
-      toast.error(error.response.data.message );
+      toast.error(error.response.data.message);
     }
   };
 
+  const deleteTodo = async (id) => {
+    try {
+      const response = await axios.delete(
+        `http://localhost:3003/api/tudolist/deletetudo/${id}`
+      );
+
+      // Update state to remove the deleted item from the list
+      setData(data.filter((x) => x._id !== id));
+      toast.success(response.data.message);
+    } catch (error) {
+      toast.error("Failed to delete TODO item");
+    }
+  };
+
+  const edittudo = async (id) => {
+    try {
+      const todoItem = data.find((x) => x._id === id);
+      if (todoItem) {
+        setDatapost({ Title: todoItem.Title, Description: todoItem.Description });
+        setEditId(id);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch TODO item for editing");
+    }
+  };
+
+  const updateTodo = async (e) => {
+    e.preventDefault();
+    if (editId === null) return;
+
+    try {
+      const response = await axios.put(
+        `http://localhost:3003/api/tudolist/updatetudo/${editId}`,
+        {
+          Title: datapost.Title,
+          Description: datapost.Description,
+        }
+      );
+
+      toast.success(response.data.message);
+      const updatedList = await axios.get(
+        "http://localhost:3003/api/tudolist/showalldatas"
+      );
+      setData(updatedList.data);
+      setDatapost({ Title: "", Description: "" });
+      setEditId(null);
+    } catch (error) {
+      toast.error(error.response.data.message);
+    }
+  };
+
+  useEffect(() => {
+    const fetchTodoData = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:3003/api/tudolist/showalldatas"
+        );
+        setData(response.data);
+      } catch (error) {
+        toast.error("Failed to fetch TODO list");
+      }
+    };
+
+    fetchTodoData();
+  }, []);
+
   return (
-    <>
+    <MDBContainer className="p-5">
+      <Toaster />
+      <MDBRow>
+        <MDBCol md="6">
+          <MDBCard className="mb-4">
+            <MDBCardBody>
+              <MDBCardTitle className="text-center mb-4">
+                {editId ? "Update TODO" : "Add TODO"}
+              </MDBCardTitle>
+              <form onSubmit={editId ? updateTodo : postdata}>
+                <MDBInput
+                  className="mb-4"
+                  label="Enter Your Title"
+                  type="text"
+                  value={datapost.Title}
+                  onChange={(e) =>
+                    setDatapost({ ...datapost, Title: e.target.value })
+                  }
+                />
+                <MDBInput
+                  className="mb-4"
+                  label="Enter Your Description"
+                  type="textarea"
+                  rows="5"
+                  value={datapost.Description}
+                  onChange={(e) =>
+                    setDatapost({ ...datapost, Description: e.target.value })
+                  }
+                />
+                <div className="text-center">
+                  <MDBBtn type="submit" color="primary">
+                    {editId ? "Update" : "Submit"}
+                  </MDBBtn>
+                </div>
+              </form>
+            </MDBCardBody>
+          </MDBCard>
+        </MDBCol>
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-          height: '100vh',
-          backgroundColor: '#f0f0f0',
-        }}
-      >
-        <form onSubmit={postdata}>
-        <Toaster/>
-          <div
-            style={{
-              width: '500px',
-              backgroundColor: '#ffffff',
-              padding: '20px',
-              borderRadius: '8px',
-              boxShadow: '0px 0px 10px 0px rgba(0,0,0,0.1)',
-              marginLeft: '200px',
-            }}
-          >
-            <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>TODO LIST</h2>
-
-            <div style={{ marginBottom: '15px' }}>
-              <input
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  fontSize: '16px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  boxSizing: 'border-box',
-                }}
-                placeholder='Enter Your Title'
-                type='text'
-                onChange={(e) => Setdatapost({ ...datapost, Title: e.target.value })}
-              />
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-              <textarea
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  fontSize: '16px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  boxSizing: 'border-box',
-                }}
-                placeholder='Enter Your Description'
-                onChange={(e) => Setdatapost({ ...datapost, Description: e.target.value })}
-                rows={5}
-              />
-            </div>
-
-            <div style={{ textAlign: 'center' }}>
-              <button
-                type='submit'
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '16px',
-                  backgroundColor: '#007bff',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
-              >
-                Submit
-              </button>
-            </div>
-          </div>
-        </form>
-
-        <div
-          style={{
-            width: '500px',
-            height: '500px',
-            backgroundColor: '#ffffff',
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0px 0px 10px 0px rgba(0,0,0,0.1)',
-            marginLeft: '200px',
-          }}
-        ></div>
-      </div>
-    </>
+        <MDBCol md="6">
+          <MDBCard className="mb-4">
+            <MDBCardBody>
+              <MDBCardTitle className="text-center mb-4">
+                TODO Items
+              </MDBCardTitle>
+              {data.map((x) => (
+                <MDBCard key={x._id} className="mb-3">
+                  <MDBCardBody>
+                    <MDBCardTitle>{x.Title}</MDBCardTitle>
+                    <MDBCardText>{x.Description}</MDBCardText>
+                    <div className="d-flex justify-content-end">
+                      <MDBBtn
+                        size="sm"
+                        color="warning"
+                        className="me-2"
+                        onClick={() => edittudo(x._id)}
+                      >
+                        <MDBIcon icon="edit" /> Edit
+                      </MDBBtn>
+                      <MDBBtn
+                        size="sm"
+                        color="danger"
+                        onClick={() => deleteTodo(x._id)}
+                      >
+                        <MDBIcon icon="trash" /> Delete
+                      </MDBBtn>
+                    </div>
+                  </MDBCardBody>
+                </MDBCard>
+              ))}
+            </MDBCardBody>
+          </MDBCard>
+        </MDBCol>
+      </MDBRow>
+    </MDBContainer>
   );
 };
 
